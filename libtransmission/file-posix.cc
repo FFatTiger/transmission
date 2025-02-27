@@ -261,6 +261,46 @@ std::string_view tr_sys_path_basename(std::string_view path, tr_error** /*error*
     return std::empty(path) ? "/"sv : path;
 }
 
+bool tr_sys_path_limit_filename(std::string& subpath, std::string_view suffix, size_t extra)
+{
+    constexpr size_t kMaxExt = 9; // Includes dot. Keeps ".backup", ".original".
+
+    auto basename_pos = subpath.find_last_of('/');
+    if (basename_pos == std::string::npos) basename_pos = 0;
+    else if (basename_pos == subpath.size() - 1) return false; // subpath ends with '/', so it's not a file.
+    else ++basename_pos;
+
+    if (auto basename_len = subpath.size() - basename_pos; basename_len + extra < 256) return false;
+
+    auto ext_pos = subpath.find_last_of('.');
+    if (ext_pos != std::string::npos)
+    {
+        if (ext_pos <= basename_pos)
+        {
+            ext_pos = std::string::npos;
+        }
+        else if (auto ext_len = subpath.size() - ext_pos; ext_len > kMaxExt)
+        {
+            ext_pos = std::string::npos;
+        }
+    }
+    auto const ext = ext_pos == std::string::npos ? ""s : std::string{ subpath.cbegin() + ext_pos, subpath.cend() };
+
+    auto cut_pos = basename_pos + 255 - ext.size() - suffix.size() - extra;
+    // Avoid cutting at the middle of a UTF-8 character.
+    for (auto iter = subpath.cbegin() + cut_pos; iter > subpath.cbegin() + basename_pos; --iter)
+    {
+        if ((*iter & 0xC0) == 0x80) --cut_pos;
+        else break;
+    }
+
+    subpath.erase(cut_pos);
+    subpath.append(suffix);
+    subpath.append(ext);
+
+    return true;
+}
+
 // This function is adapted from Node.js's path.posix.dirname() function,
 // which is copyrighted by Joyent, Inc. and other Node contributors
 // and is distributed under MIT (SPDX:MIT) license.

@@ -581,6 +581,12 @@ std::string_view tr_sys_path_basename(std::string_view path, tr_error** error)
     return !std::empty(path) ? path : "/"sv;
 }
 
+// Not implemented. May not need to at all. Return false to indicate subpath not changed.
+bool tr_sys_path_limit_filename(std::string& subpath, std::string_view suffix, size_t extra)
+{
+    return false;
+}
+
 [[nodiscard]] static bool isWindowsDeviceRoot(char ch) noexcept
 {
     return isalpha(static_cast<int>(ch)) != 0;

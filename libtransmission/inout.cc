@@ -72,7 +72,7 @@ enum class IoMode
     Write
 };
 
-bool getFilename(tr_pathbuf& setme, tr_torrent const* tor, tr_file_index_t file_index, IoMode io_mode)
+bool getFilename(tr_pathbuf& setme, tr_torrent* tor, tr_file_index_t file_index, IoMode io_mode)
 {
     if (auto found = tor->findFile(file_index); found)
     {
@@ -89,7 +89,17 @@ bool getFilename(tr_pathbuf& setme, tr_torrent const* tor, tr_file_index_t file_
     // Let's figure out where it goes so that we can create it.
     auto const base = tor->currentDir();
     auto const suffix = tor->session->isIncompleteFileNamingEnabled() ? tr_torrent_files::PartialFileSuffix : ""sv;
-    setme.assign(base, '/', tor->fileSubpath(file_index), suffix);
+
+    std::string subpath{ tor->fileSubpath(file_index) };
+    auto const idstr = fmt::format("_{:x}-{}", file_index, tor->infoHashString()); // Avoid filename collision with best efforts.
+    auto const changed = tr_sys_path_limit_filename(subpath, idstr, suffix.size());
+    setme.assign(base, '/', subpath, suffix);
+    if (changed)
+    {
+        tor->setFileSubpath(file_index, subpath);
+        tor->setDirty();
+        tor->markChanged();
+    }
     return true;
 }
 

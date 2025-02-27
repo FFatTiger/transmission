@@ -234,6 +234,21 @@ std::string tr_sys_path_resolve(std::string_view path, struct tr_error** error =
 std::string_view tr_sys_path_basename(std::string_view path, struct tr_error** error = nullptr);
 
 /**
+ * @brief Limit filename length to 255.
+ *        Truncate basename at tail, append suffix, then append extension back.
+ *        The resultant subpath length is limited to (255 - extra).
+ *
+ * @param[in,out] subpath Only the basename part may be changed.
+ * @param[in] suffix Normally a file ID string to help avoid filename collision.
+ * @param[in] extra Extra bytes to reserve, for ".part", or 0 if not needed.
+ *
+ * @return Whether subpath is changed.
+ *         If subpath basename too long, then subpath is changed, return true.
+ *         If basename length was less than (255 - extra), return false.
+ */
+bool tr_sys_path_limit_filename(std::string& subpath, std::string_view suffix, size_t extra);
+
+/**
  * @brief Portability wrapper for `dirname()`.
  *
  * @param[in]  path  Path to file or directory.
